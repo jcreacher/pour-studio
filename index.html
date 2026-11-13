@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Pour Studio Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: one-screen studio. Slim bar on top, canvas fills the middle, controls sit under the thumb. */
+  --bench:#1c2025;      /* workbench behind the canvas */
+  --panel:#272c33;      /* control surfaces */
+  --line:#3a414b;       /* borders */
+  --ink:#ece9e2;        /* text */
+  --muted:#9aa1ab;      /* secondary text */
+  --brass:#e9b44c;      /* active state */
+  --font-display:"Outfit",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-body:"Outfit",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bench);color:var(--ink);font-family:var(--font-body);font-size:15px;
+  display:flex;flex-direction:column;overflow:hidden;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px}
+h1{font-family:var(--font-display);font-weight:600;font-size:18px;margin:0;letter-spacing:.01em}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-weight:500;color:var(--ink);background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:9px 14px;min-height:40px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+button[aria-pressed="true"],.btn[aria-pressed="true"]{background:var(--brass);border-color:var(--brass);color:#1c2025}
+.btn{font:inherit;font-weight:500;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 14px;
+  min-height:40px;cursor:pointer;position:relative;overflow:hidden;display:inline-flex;align-items:center}
+.btn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
+.btn:focus-within{outline:2px solid var(--brass);outline-offset:2px}
+button.primary{background:var(--ink);border-color:var(--ink);color:#1c2025}
+main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:4px 16px;perspective:900px}
+#tiltWrap{transition:transform .12s ease-out;box-shadow:0 14px 40px rgba(0,0,0,.5);border-radius:3px;line-height:0}
+canvas{display:block;width:100%;height:100%;border-radius:3px;touch-action:none;background:#f4f2ea}
+footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
+.palrow{display:flex;gap:8px;align-items:center}
+#palette{display:flex;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding:6px;flex:1;min-width:0;scrollbar-width:none}
+#palette::-webkit-scrollbar{display:none}
+.sw{flex:0 0 auto}
+#multiBtn{padding:6px 10px;min-height:34px;font-size:13px;flex:0 0 auto}
+.plus{font-size:22px;line-height:1;color:var(--ink);background:var(--panel);border-style:dashed}
+#mixer{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+#mixer[hidden]{display:none}
+#mixer label{display:grid;grid-template-columns:86px 1fr;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+#mixer input[type=range]{width:100%;accent-color:var(--brass)}
+#mixPreview{width:44px;height:44px;border-radius:50%;border:2px solid var(--ink);flex:0 0 auto}
+#mixer .row{justify-content:space-between}
+.sw{width:34px;height:34px;min-height:34px;padding:0;border-radius:50%;border:2px solid var(--line);position:relative}
+.sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--bench),0 0 0 4px var(--brass)}
+#status{margin:0;color:var(--muted);font-size:13px;line-height:1.35;min-height:2.7em}
+#overlay{position:fixed;inset:0;background:var(--bench);z-index:5;overflow-y:auto;padding:16px}
+#overlay[hidden]{display:none}
+.sheet{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:14px;align-items:stretch;min-height:100%;justify-content:center}
+.sheet[hidden]{display:none}
+.sheet h2{font-family:var(--font-display);font-weight:600;font-size:22px;margin:0;text-align:center;text-wrap:balance}
+.sheet p{margin:0;color:var(--muted);text-align:center;line-height:1.4}
+.center{justify-content:center}
+#outImg{align-self:center;max-width:70%;max-height:46vh;border-radius:3px;box-shadow:0 14px 40px rgba(0,0,0,.5);-webkit-user-select:auto;user-select:auto;-webkit-touch-callout:default}
+#toWall{align-self:center}
+/* wall scene: the box is 120 inches wide, --in is one inch */
+#wall{position:relative;width:100%;aspect-ratio:120/92;border-radius:12px;overflow:hidden;
+  background:linear-gradient(180deg,#cfc9bf 0%,#c4bdb2 100%)}
+#floor{position:absolute;left:0;right:0;bottom:0;height:calc(var(--in)*7);background:#7b6a58}
+#sofa{position:absolute;left:50%;bottom:calc(var(--in)*5);width:calc(var(--in)*84);height:calc(var(--in)*31);transform:translateX(-50%);
+  background:#4d5a63;border-radius:calc(var(--in)*5) calc(var(--in)*5) calc(var(--in)*2) calc(var(--in)*2);display:flex;gap:calc(var(--in)*1.5);
+  align-items:flex-end;padding:0 calc(var(--in)*8) calc(var(--in)*6)}
+#sofa i{flex:1;height:calc(var(--in)*10);background:#5c6a74;border-radius:calc(var(--in)*2)}
+#art{position:absolute;left:50%;top:32.6%;transform:translate(-50%,-50%);box-sizing:content-box;font-size:var(--in);transition:width .2s ease,height .2s ease}
+#art img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:block;max-width:none}
+#art.landscape img{transform:translate(-50%,-50%) rotate(90deg)}
+#art::after{content:"";position:absolute;inset:0;pointer-events:none}
+#art.metal{box-shadow:0 calc(var(--in)*1.2) calc(var(--in)*2.4) rgba(0,0,0,.38)}
+#art.metal::after{background:linear-gradient(115deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.28) 47%,rgba(255,255,255,0) 62%)}
+#art.canvas{box-shadow:calc(var(--in)*.5) calc(var(--in)*.9) calc(var(--in)*1.6) rgba(0,0,0,.3)}
+#art.canvas img{filter:saturate(.92) contrast(.96)}
+#art.canvas::after{background:repeating-linear-gradient(0deg,rgba(0,0,0,.05) 0 1px,transparent 1px 3px),repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px)}
+#art.framed{border:.9em solid #1a1a1c;padding:2em;background:#f6f4ee;box-shadow:0 calc(var(--in)*1) calc(var(--in)*2) rgba(0,0,0,.35)}
+#roomImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#roomImg[hidden]{display:none}
+#wall.mine #sofa,#wall.mine #floor{display:none}
+#wall.mine #art{touch-action:none;cursor:grab}
+#scaleRow{display:flex;flex-direction:column;gap:6px}
+#scaleRow[hidden]{display:none}
+#scaleRow label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+#scaleRow input{width:100%;accent-color:var(--brass)}
+#scaleRow p{text-align:left}
+#options{display:flex;flex-direction:column;gap:12px}
+
+#buy{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+#pick{margin:0;color:var(--ink);text-align:left;font-variant-numeric:tabular-nums}
+#pick b{font-size:20px;font-weight:600;display:block}
+.fine{font-size:13px}
+#backBtn{align-self:center}
+#fail{padding:24px;text-align:center;color:var(--ink)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Pour Studio</h1>
+  <div class="row">
+    <button id="clearBtn" type="button">Clear</button>
+    <button id="doneBtn" type="button" class="primary">Done</button>
+  </div>
+</header>
+
+<main id="stage">
+  <div id="tiltWrap"><canvas id="c" aria-label="Painting canvas"></canvas></div>
+</main>
+
+<footer>
+  <div class="row" role="group" aria-label="Tool">
+    <button id="modePour" type="button" aria-pressed="true">Pour</button>
+    <button id="modeTilt" type="button" aria-pressed="false">Tilt</button>
+    <button id="motionBtn" type="button" aria-pressed="false">Use phone motion</button>
+  </div>
+  <div id="mixer" hidden>
+    <label for="mixHue">Color<input id="mixHue" type="range" min="0" max="360" value="200"></label>
+    <label for="mixSat">Richness<input id="mixSat" type="range" min="0" max="100" value="75"></label>
+    <label for="mixLit">Brightness<input id="mixLit" type="range" min="5" max="95" value="50"></label>
+    <div class="row">
+      <span id="mixPreview"></span>
+      <span class="row"><button id="mixCancel" type="button">Cancel</button><button id="mixAdd" type="button" class="primary">Add color</button></span>
+    </div>
+  </div>
+  <div class="palrow">
+    <button id="addColor" type="button" class="sw plus" aria-label="Mix a custom color" aria-expanded="false">+</button>
+    <button id="multiBtn" type="button" aria-pressed="false">Multi</button>
+    <div id="palette" role="group" aria-label="Paint color"></div>
+  </div>
+  <p id="status" aria-live="polite"></p>
+</footer>
+
+<div id="overlay" hidden>
+  <section id="stepSave" class="sheet">
+    <img id="outImg" alt="Your finished painting">
+    <h2>Save your painting?</h2>
+    <p id="saveMsg">Saving is free. You get a full-size image for a wallpaper or to share.</p>
+    <div class="row center">
+      <button id="saveBtn" type="button" class="primary">Save image</button>
+      <button id="skipSave" type="button">Make it real</button>
+    </div>
+    <button id="toWall" type="button" hidden>Next</button>
+  </section>
+
+  <section id="stepWall" class="sheet" hidden>
+    <h2 id="wallHead">Make it real</h2>
+    <div id="wall" aria-label="Preview of your painting hanging on a wall">
+      <img id="roomImg" alt="" hidden>
+      <div id="art" class="metal"><img id="wallImg" alt="Your painting as a print"></div>
+      <div id="sofa"><i></i><i></i></div>
+      <div id="floor"></div>
+    </div>
+    <div id="options">
+      <div class="row" role="group" aria-label="Room">
+        <button id="roomSample" type="button" aria-pressed="true">Sample room</button>
+        <label id="roomMine" class="btn" for="roomFile" aria-pressed="false">Use a photo of my room<input id="roomFile" type="file" accept="image/*"></label>
+      </div>
+      <div id="scaleRow" hidden>
+        <label for="roomScale">Print size on your wall<input id="roomScale" type="range" min="30" max="300" value="100"></label>
+        <p class="fine">Drag the print to place it. Slide until it looks true to size next to your furniture.</p>
+      </div>
+      <div class="row" role="group" aria-label="Orientation" id="orients"></div>
+      <div class="row" role="group" aria-label="Material" id="mediums"></div>
+      <div class="row" role="group" aria-label="Size" id="sizes"></div>
+      <div id="buy">
+        <p id="pick"></p>
+        <button id="orderBtn" type="button" class="primary">Order this print</button>
+      </div>
+      <p id="orderMsg" class="fine">Example prices for this mockup. Real prices will come from the print partner.</p>
+      <button id="backBtn" type="button">Back to painting</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var SW=480, SH=640;            // simulation grid (3:4 canvas)
+var SUB=8, DT=0.18;            // substeps per frame, step size
+var EXPORT_W=2400, EXPORT_H=3200;
+
+var COLORS=[
+  ["Navy","#14213d"],["Teal","#0c8fa0"],["Turquoise","#2ec4b6"],["White","#f7f7f2"],
+  ["Gold","#e9b44c"],["Copper","#b5651d"],["Magenta","#c2185b"],["Coral","#ff6b5e"],
+  ["Violet","#5e3b9e"],["Black","#16161a"],["Lime","#9bc53d"],["Sky","#6cb4ee"],
+  ["Crimson","#a4161a"],["Orange","#f3722c"],["Yellow","#f9c74f"],["Forest","#2d6a4f"],
+  ["Mint","#95d5b2"],["Royal blue","#1d4ed8"],["Lavender","#b8a1e3"],["Pink","#f4a6c0"],
+  ["Brown","#6f4518"],["Gray","#8d99ae"],["Silver","#cfd4da"],["Cream","#f1e3c6"]
+];
+var cupList=[0];                // colors in the cup; more than one pours in turn
+var multi=false,base=0;
+
+var canvas=document.getElementById("c");
+var wrap=document.getElementById("tiltWrap");
+var stage=document.getElementById("stage");
+var statusEl=document.getElementById("status");
+function say(t){statusEl.textContent=t;}
+
+var gl=canvas.getContext("webgl2",{antialias:false,alpha:false,premultipliedAlpha:false});
+var okFloat=gl&&(gl.getExtension("EXT_color_buffer_float")||gl.getExtension("EXT_color_buffer_half_float"));
+if(!gl||!okFloat){
+  stage.innerHTML='<p id="fail">This browser cannot run the paint simulation (it needs WebGL 2). Try a current version of Safari or Chrome.</p>';
+  return;
+}
+
+/* ---------- shaders ---------- */
+var VS="#version 300 es\nout vec2 uv;void main(){vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));uv=p;gl_Position=vec4(p*2.-1.,0.,1.);}";
+
+/* Thin-film flow: paint thickness h (alpha) moves between neighbouring cells, driven by
+   tilt (G) and by its own height difference. Pigment (rgb) rides along with the flow.
+   A thin film H0 stays stuck to the canvas, so paint leaves a coat where it has been. */
+var FS_STEP="#version 300 es\nprecision highp float;precision highp sampler2D;\n"+
+"uniform sampler2D S;uniform vec2 G;uniform float DT;out vec4 o;\n"+
+"const float K=0.8;const float H0=0.03;\n"+
+"vec4 at(ivec2 p){ivec2 z=textureSize(S,0);if(p.x<0||p.y<0||p.x>=z.x||p.y>=z.y)return vec4(0.);return texelFetch(S,p,0);}\n"+
+"float flux(float ha,float hb,float gd){float d=gd+K*(ha-hb);float up=d>0.?ha:hb;float m=max(up-H0,0.);float f=d*min(1.5*m,1.2)*DT;return clamp(f,-0.24*m,0.24*m);}\n"+
+"void main(){ivec2 p=ivec2(gl_FragCoord.xy);\n"+
+"vec4 C=at(p),L=at(p-ivec2(1,0)),R=at(p+ivec2(1,0)),D=at(p-ivec2(0,1)),U=at(p+ivec2(0,1));\n"+
+"float fL=flux(L.a,C.a,G.x),fR=flux(C.a,R.a,G.x),fD=flux(D.a,C.a,G.y),fU=flux(C.a,U.a,G.y);\n"+
+"float iL=max(fL,0.),iR=max(-fR,0.),iD=max(fD,0.),iU=max(-fU,0.);\n"+
+"float outv=max(-fL,0.)+max(fR,0.)+max(-fD,0.)+max(fU,0.);\n"+
+"float rem=max(C.a-outv,0.);float h=rem+iL+iR+iD+iU;\n"+
+"vec3 col=h>1e-5?(C.rgb*rem+L.rgb*iL+R.rgb*iR+D.rgb*iD+U.rgb*iU)/h:C.rgb;\n"+
+"o=vec4(col,h);}";
+
+var FS_SPLAT="#version 300 es\nprecision highp float;precision highp sampler2D;\n"+
+"uniform sampler2D S;uniform vec2 P;uniform float Rad;uniform float Tau;uniform float Amt;out vec4 o;\n"+
+"void main(){vec4 C=texelFetch(S,ivec2(gl_FragCoord.xy),0);float d=distance(gl_FragCoord.xy,P);\n"+
+"float g=exp(-d*d/(Rad*Rad));float w=C.a<1e-4?1.:clamp(g*0.45,0.,1.);\n"+
+"o=vec4(mix(C.r,Tau,w),0.,0.,C.a+Amt*g);}";
+
+/* Display. Each cell stores WHEN its paint left the cup (r) and how thick it is (a).
+   Colour is looked up from that time stamp in a ribbon of poured colours, so the
+   boundaries between colours stay sharp however far the paint has travelled. */
+var FS_SHOW="#version 300 es\nprecision highp float;precision highp sampler2D;\n"+
+"uniform sampler2D S;uniform sampler2D Rb;in vec2 uv;out vec4 o;\n"+
+"vec2 bil(vec2 q){vec2 ts=vec2(textureSize(S,0));vec2 tc=q*ts-0.5;vec2 f=fract(tc);ivec2 p=ivec2(floor(tc));ivec2 mx=ivec2(ts)-1;\n"+
+"vec4 a=texelFetch(S,clamp(p,ivec2(0),mx),0),b=texelFetch(S,clamp(p+ivec2(1,0),ivec2(0),mx),0),c=texelFetch(S,clamp(p+ivec2(0,1),ivec2(0),mx),0),d=texelFetch(S,clamp(p+ivec2(1,1),ivec2(0),mx),0);\n"+
+"float wa=(1.-f.x)*(1.-f.y),wb=f.x*(1.-f.y),wc=(1.-f.x)*f.y,wd=f.x*f.y;\n"+
+"float h=a.a*wa+b.a*wb+c.a*wc+d.a*wd;\n"+
+"float t=h>1e-6?(a.r*a.a*wa+b.r*b.a*wb+c.r*c.a*wc+d.r*d.a*wd)/h:a.r;return vec2(t,h);}\n"+
+"float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\n"+
+"float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}\n"+
+"vec3 rib(float i){return texelFetch(Rb,ivec2(int(mod(i,2048.)),0),0).rgb;}\n"+
+"void main(){vec2 ts=vec2(textureSize(S,0));vec2 e=1./ts;vec2 s=bil(uv);float h=s.y;\n"+
+"float fw=min(fwidth(s.x),4.);\n"+
+"float u=s.x+(vn(uv*ts/22.)-0.5)*0.30+(vn(uv*ts/6.)-0.5)*0.10;\n"+
+"float i=floor(u),f=u-i;float w=clamp(fw*1.5,0.03,1.);\n"+
+"vec3 col=mix(rib(i),rib(i+1.),smoothstep(1.-w,1.,f));\n"+
+"vec3 mean=(rib(i-1.)+rib(i)+rib(i+1.)+rib(i+2.))*0.25;\n"+
+"col=mix(col,mean,smoothstep(0.7,1.8,fw));\n"+
+"float hx=(bil(uv+vec2(e.x,0.)).y-bil(uv-vec2(e.x,0.)).y)*0.5;float hy=(bil(uv+vec2(0.,e.y)).y-bil(uv-vec2(0.,e.y)).y)*0.5;\n"+
+"vec3 n=normalize(vec3(-hx*1.6,-hy*1.6,1.));vec3 Ld=normalize(vec3(-0.4,0.6,0.7));\n"+
+"float diff=clamp(dot(n,Ld),0.,1.);float spec=pow(max(dot(n,normalize(Ld+vec3(0.,0.,1.))),0.),70.);\n"+
+"vec3 paint=col*(0.55+0.64*diff)+spec*0.28;\n"+
+"float weave=sin(uv.x*ts.x*3.14159)*sin(uv.y*ts.y*3.14159);\n"+
+"vec3 cloth=vec3(0.955,0.945,0.915)*(1.-0.025*weave);\n"+
+"float cover=smoothstep(0.004,0.03,h);\n"+
+"o=vec4(mix(cloth,paint,cover),1.);}";
+
+function sh(type,src){var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+function prog(fs){var p=gl.createProgram();gl.attachShader(p,sh(gl.VERTEX_SHADER,VS));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));
+  var u={},n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);
+  for(var i=0;i<n;i++){var a=gl.getActiveUniform(p,i);u[a.name]=gl.getUniformLocation(p,a.name);}
+  return {p:p,u:u};}
+var pStep=prog(FS_STEP),pSplat=prog(FS_SPLAT),pShow=prog(FS_SHOW);
+var vao=gl.createVertexArray();gl.bindVertexArray(vao);
+
+var F32=!!gl.getExtension("EXT_color_buffer_float");
+function target(){var t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+  if(F32)gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,SW,SH,0,gl.RGBA,gl.FLOAT,null);
+  else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,SW,SH,0,gl.RGBA,gl.HALF_FLOAT,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  var f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);
+  return {t:t,f:f};}
+var A=target(),B=target();
+if(F32&&gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE){F32=false;A=target();B=target();}
+if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE){
+  stage.innerHTML='<p id="fail">This device cannot render the paint simulation textures.</p>';return;}
+
+function clearAll(){[A,B].forEach(function(x){gl.bindFramebuffer(gl.FRAMEBUFFER,x.f);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);});}
+clearAll();
+function pass(p,dst){gl.bindFramebuffer(gl.FRAMEBUFFER,dst?dst.f:null);gl.useProgram(p.p);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,A.t);gl.uniform1i(p.u.S,0);}
+function swap(){var t=A;A=B;B=t;}
+
+/* ---------- state ---------- */
+var G=[0,0];                   // tilt, in canvas space (x right, y up)
+var mode="pour";
+var pour={on:false,x:SW/2,y:SH/2};
+var cup=0.5;                   // pour clock, in bands; each color change starts a new band
+var pouredSince=false;
+var motion={on:false,seen:false,b0:null,g0:null};
+var drag=null;
+
+var BAND=0.45;                 // seconds of pouring per colour band
+var RIB=2048,ribbon=gl.createTexture(),written=0;
+gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,ribbon);
+gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,RIB,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(RIB*4));
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+gl.activeTexture(gl.TEXTURE0);
+function rgb8(hex){return [parseInt(hex.substr(1,2),16),parseInt(hex.substr(3,2),16),parseInt(hex.substr(5,2),16)];}
+/* keep the ribbon filled a few bands ahead of the cup with the color selected right now */
+function fillRibbon(){
+  var need=Math.floor(cup)+3;if(written>need)return;
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,ribbon);
+  for(;written<=need;written++){var c=rgb8(COLORS[cupList[(written-base)%cupList.length]][1]);
+    gl.texSubImage2D(gl.TEXTURE_2D,0,written%RIB,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([c[0],c[1],c[2],255]));}
+  gl.activeTexture(gl.TEXTURE0);
+}
+/* a new color starts on a fresh band so it never bleeds into paint already poured */
+function setCup(list){if(pouredSince){cup=Math.floor(cup)+1.5;pouredSince=false;}written=Math.floor(cup);base=written;cupList=list.slice();fillRibbon();}
+
+function splat(x,y){pouredSince=true;cup+=1/(60*SUB*BAND);fillRibbon();pass(pSplat,B);gl.viewport(0,0,SW,SH);
+  gl.uniform2f(pSplat.u.P,x,y);gl.uniform1f(pSplat.u.Rad,8.0);gl.uniform1f(pSplat.u.Tau,cup);gl.uniform1f(pSplat.u.Amt,0.10);
+  gl.drawArrays(gl.TRIANGLES,0,3);swap();}
+function step(){pass(pStep,B);gl.viewport(0,0,SW,SH);gl.uniform2f(pStep.u.G,G[0],G[1]);gl.uniform1f(pStep.u.DT,DT);
+  gl.drawArrays(gl.TRIANGLES,0,3);swap();}
+function show(w,h){pass(pShow,null);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,ribbon);gl.uniform1i(pShow.u.Rb,1);gl.activeTexture(gl.TEXTURE0);gl.viewport(0,0,w,h);gl.drawArrays(gl.TRIANGLES,0,3);}
+
+var demo=0;                    // no automatic pour: the canvas starts blank
+function frame(){
+  for(var i=0;i<SUB;i++){
+    if(demo>0)splat(SW*0.5,SH*0.56);
+    else if(pour.on)splat(pour.x,pour.y);
+    step();
+  }
+  if(demo>0){demo--;if(demo===74)pick(2);else if(demo===38)pick(4);else if(demo===0)pick(1);}
+  show(canvas.width,canvas.height);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- layout ---------- */
+function fit(){
+  var r=stage.getBoundingClientRect(),w=r.width-32,h=r.height-8;
+  var cw=Math.min(w,h*SW/SH),ch=cw*SH/SW;
+  wrap.style.width=cw+"px";wrap.style.height=ch+"px";
+  var dpr=Math.min(window.devicePixelRatio||1,3);
+  canvas.width=Math.min(1440,Math.round(cw*dpr));canvas.height=Math.round(canvas.width*SH/SW);
+}
+window.addEventListener("resize",fit);fit();
+
+/* ---------- palette ---------- */
+var pal=document.getElementById("palette");
+function addSwatch(i){var c=COLORS[i];
+  var b=document.createElement("button");b.type="button";b.className="sw";b.id="sw"+i;
+  b.style.background=c[1];b.setAttribute("aria-label",c[0]);b.title=c[0];b.setAttribute("aria-pressed","false");
+  b.addEventListener("click",function(){demo=0;pick(i);});
+  pal.appendChild(b);return b;}
+/* custom colors are remembered on this device only */
+try{JSON.parse(localStorage.getItem("pour.custom")||"[]").forEach(function(h){if(/^#[0-9a-f]{6}$/.test(h))COLORS.push(["Custom",h]);});}catch(_){}
+var PRESETS=24;
+COLORS.forEach(function(c,i){addSwatch(i);});
+
+var mixer=document.getElementById("mixer"),mh=document.getElementById("mixHue"),ms=document.getElementById("mixSat"),ml=document.getElementById("mixLit"),addBtn=document.getElementById("addColor");
+function hslHex(h,sv,l){sv/=100;l/=100;var a=sv*Math.min(l,1-l);
+  function f(n){var k=(n+h/30)%12,v=l-a*Math.max(-1,Math.min(k-3,9-k,1));return ("0"+Math.round(v*255).toString(16)).slice(-2);}
+  return "#"+f(0)+f(8)+f(4);}
+function mixNow(){return hslHex(+mh.value,+ms.value,+ml.value);}
+function mixShow(){document.getElementById("mixPreview").style.background=mixNow();}
+[mh,ms,ml].forEach(function(el){el.addEventListener("input",mixShow);});
+function mixOpen(o){mixer.hidden=!o;addBtn.setAttribute("aria-expanded",o?"true":"false");if(o)mixShow();fit();}
+addBtn.addEventListener("click",function(){mixOpen(mixer.hidden);});
+document.getElementById("mixCancel").addEventListener("click",function(){mixOpen(false);});
+document.getElementById("mixAdd").addEventListener("click",function(){
+  demo=0;COLORS.push(["Custom",mixNow()]);var b=addSwatch(COLORS.length-1);
+  try{localStorage.setItem("pour.custom",JSON.stringify(COLORS.slice(PRESETS).map(function(c){return c[1];})));}catch(_){}
+  mixOpen(false);pick(COLORS.length-1);
+  try{b.scrollIntoView({inline:"center",block:"nearest"});}catch(_){}
+});
+
+function pick(i){
+  var list;
+  if(multi){list=cupList.slice();var k=list.indexOf(i);if(k<0)list.push(i);else if(list.length>1)list.splice(k,1);}
+  else list=[i];
+  setCup(list);paintSwatches();hint();
+}
+function paintSwatches(){for(var k=0;k<COLORS.length;k++)document.getElementById("sw"+k).setAttribute("aria-pressed",cupList.indexOf(k)>=0?"true":"false");}
+var multiBtn=document.getElementById("multiBtn");
+multiBtn.addEventListener("click",function(){
+  demo=0;multi=!multi;multiBtn.setAttribute("aria-pressed",multi?"true":"false");
+  if(!multi&&cupList.length>1){setCup([cupList[cupList.length-1]]);paintSwatches();}
+  hint();
+});
+
+function hint(){
+  if(mode==="pour")say(multi?"Multi-color cup: tap colors to add or remove them. Hold the canvas and the cup pours "+(cupList.length>1?"all "+cupList.length:"them")+" in turn."
+    :"Touch and hold the canvas to pour. Tap another color to switch, or + to mix your own.");
+  else if(motion.on&&motion.seen)say("Phone motion is on. Tip the phone and the paint runs downhill. Lay it flat to stop.");
+  else say("Drag on the canvas to tip it. Paint runs toward your finger. Let go to lay it flat.");
+}
+
+/* ---------- modes ---------- */
+var bPour=document.getElementById("modePour"),bTilt=document.getElementById("modeTilt"),bMotion=document.getElementById("motionBtn");
+function setMode(m){mode=m;bPour.setAttribute("aria-pressed",m==="pour");bTilt.setAttribute("aria-pressed",m==="tilt");hint();}
+bPour.addEventListener("click",function(){setMode("pour");});
+bTilt.addEventListener("click",function(){setMode("tilt");});
+
+/* ---------- pointer input ---------- */
+function toSim(e){var r=canvas.getBoundingClientRect();return [(e.clientX-r.left)/r.width*SW,(1-(e.clientY-r.top)/r.height)*SH];}
+function setTouchTilt(dx,dy){
+  var r=canvas.getBoundingClientRect(),s=r.width*0.35,gx=dx/s,gy=-dy/s,len=Math.hypot(gx,gy);
+  if(len>1.2){gx*=1.2/len;gy*=1.2/len;}
+  G[0]=gx;G[1]=gy;
+  wrap.style.transform="rotateY("+(gx*11).toFixed(2)+"deg) rotateX("+(gy*11).toFixed(2)+"deg)";
+}
+canvas.addEventListener("pointerdown",function(e){
+  e.preventDefault();demo=0;try{canvas.setPointerCapture(e.pointerId);}catch(_){}
+  if(mode==="pour"){var p=toSim(e);pour.on=true;pour.x=p[0];pour.y=p[1];}
+  else if(!motion.on||!motion.seen){drag={x:e.clientX,y:e.clientY};}
+});
+canvas.addEventListener("pointermove",function(e){
+  if(mode==="pour"&&pour.on){var p=toSim(e);pour.x=p[0];pour.y=p[1];}
+  else if(drag){setTouchTilt(e.clientX-drag.x,e.clientY-drag.y);}
+});
+function up(){pour.on=false;if(drag){drag=null;G[0]=0;G[1]=0;wrap.style.transform="";}}
+canvas.addEventListener("pointerup",up);canvas.addEventListener("pointercancel",up);
+
+/* ---------- phone motion ---------- */
+function onOrient(e){
+  if(e.beta==null||e.gamma==null)return;
+  if(!motion.seen){motion.seen=true;motion.b0=e.beta;motion.g0=e.gamma;setMode("tilt");}
+  var k=Math.PI/180,gx=Math.sin((e.gamma-motion.g0)*k)*2.4,gy=-Math.sin((e.beta-motion.b0)*k)*2.4,len=Math.hypot(gx,gy);
+  if(len<0.06){gx=0;gy=0;}                       // dead zone so a resting phone holds still
+  if(len>1.4){gx*=1.4/len;gy*=1.4/len;}
+  G[0]=gx;G[1]=gy;
+}
+if(typeof DeviceOrientationEvent==="undefined"){bMotion.hidden=true;}
+bMotion.addEventListener("click",function(){
+  if(motion.on){motion.on=false;motion.seen=false;window.removeEventListener("deviceorientation",onOrient);
+    G[0]=0;G[1]=0;bMotion.setAttribute("aria-pressed","false");hint();return;}
+  function start(){
+    motion.on=true;motion.seen=false;bMotion.setAttribute("aria-pressed","true");
+    window.addEventListener("deviceorientation",onOrient);
+    say("Hold the phone flat for a second so it can set level.");
+    setTimeout(function(){
+      if(motion.on&&!motion.seen){motion.on=false;window.removeEventListener("deviceorientation",onOrient);
+        bMotion.setAttribute("aria-pressed","false");setMode("tilt");
+        say("Motion sensors are not available in this view. Drag on the canvas to tip it instead.");}
+    },1500);
+  }
+  var req=DeviceOrientationEvent.requestPermission;
+  if(typeof req==="function"){
+    req.call(DeviceOrientationEvent).then(function(s){if(s==="granted")start();else say("Motion access was declined. Drag on the canvas to tip it instead.");})
+      .catch(function(){say("Motion sensors are not available in this view. Drag on the canvas to tip it instead.");});
+  }else start();
+});
+
+/* ---------- clear and save ---------- */
+document.getElementById("clearBtn").addEventListener("click",function(){demo=0;clearAll();hint();});
+
+var $=function(id){return document.getElementById(id);};
+var overlay=$("overlay"),stepSave=$("stepSave"),stepWall=$("stepWall"),lastUrl=null,lastBlob=null,outW=0,outH=0;
+function goWall(){stepSave.hidden=true;stepWall.hidden=false;
+  land=false;press("orients",2,0);setMedium(0);setSize(1);if(!mine)setRoom(false);overlay.scrollTop=0;sizeWall();}
+function closeAll(){overlay.hidden=true;}
+
+$("doneBtn").addEventListener("click",function(){
+  var max=gl.getParameter(gl.MAX_TEXTURE_SIZE),w=EXPORT_W,h=EXPORT_H;
+  if(h>max){h=max;w=Math.round(h*SW/SH);}
+  var ow=canvas.width,oh=canvas.height;
+  canvas.width=w;canvas.height=h;show(w,h);
+  canvas.toBlob(function(blob){
+    canvas.width=ow;canvas.height=oh;
+    if(!blob){say("The image could not be created on this device.");return;}
+    lastBlob=blob;outW=w;outH=h;
+    if(lastUrl)URL.revokeObjectURL(lastUrl);lastUrl=URL.createObjectURL(blob);
+    $("outImg").src=lastUrl;$("wallImg").src=lastUrl;
+    $("saveMsg").textContent="Saving is free. You get a full-size image for a wallpaper or to share.";
+    $("saveBtn").hidden=false;$("skipSave").hidden=false;$("toWall").hidden=true;
+    stepWall.hidden=true;stepSave.hidden=false;overlay.hidden=false;overlay.scrollTop=0;
+  },"image/png");
+});
+
+function saveFallback(){
+  /* no save surface in this view: the picture itself can be saved by hand */
+  $("saveMsg").textContent="Press and hold the picture, then choose Save.";
+  $("saveBtn").hidden=true;$("skipSave").hidden=true;$("toWall").hidden=false;
+}
+$("saveBtn").addEventListener("click",function(){
+  if(!lastBlob)return;
+  var use=window.claude&&typeof window.claude.use==="function"?window.claude.use("downloads"):null;
+  if(!use){
+    /* outside Claude a normal download works */
+    try{var a=document.createElement("a");a.href=lastUrl;a.download="pour-painting.png";document.body.appendChild(a);a.click();a.remove();}catch(_){}
+    $("saveMsg").textContent="If the download did not start, press and hold the picture and choose Save.";
+    $("saveBtn").hidden=true;$("skipSave").hidden=true;$("toWall").hidden=false;return;
+  }
+  Promise.resolve(use).then(function(dl){
+    if(!dl){saveFallback();return;}
+    return dl.save({filename:"pour-painting.png",data:lastBlob}).then(function(){goWall();})
+      .catch(function(err){if(err&&err.code==="declined")return;saveFallback();});
+  }).catch(saveFallback);
+});
+$("skipSave").addEventListener("click",goWall);
+$("toWall").addEventListener("click",goWall);
+$("backBtn").addEventListener("click",closeAll);
+
+/* example catalog for the mockup: sizes in inches, prices are placeholders */
+var MEDIUMS=[["Metal","metal","Glossy aluminum, floats off the wall"],["Canvas","canvas","Stretched canvas, wrapped edges"],["Framed print","framed","Fine art paper, black frame, white mat"]];
+var SIZES=[[9,12],[12,16],[18,24],[30,40]];
+var PRICES={metal:[59,89,159,349],canvas:[45,65,105,219],framed:[69,99,169,329]};
+var med=0,siz=1,land=false;
+function chips(host,items,label,onPick){items.forEach(function(it,i){var b=document.createElement("button");b.type="button";b.id=host.id+i;b.textContent=label(it);
+  b.addEventListener("click",function(){onPick(i);});host.appendChild(b);});}
+chips($("orients"),["Portrait","Landscape"],function(o){return o;},function(i){land=i===1;press("orients",2,i);refresh();});
+chips($("mediums"),MEDIUMS,function(m){return m[0];},function(i){setMedium(i);});
+chips($("sizes"),SIZES,function(z){return z[0]+" x "+z[1]+" in";},function(i){setSize(i);});
+function press(host,n,i){for(var k=0;k<n;k++)$(host+k).setAttribute("aria-pressed",k===i?"true":"false");}
+function refresh(){
+  var m=MEDIUMS[med],z=SIZES[siz];
+  var a=$("art"),im=$("wallImg"),w=land?z[1]:z[0],h=land?z[0]:z[1];
+  a.className=m[1]+(land?" landscape":"");a.style.width="calc(var(--in)*"+w+")";a.style.height="calc(var(--in)*"+h+")";
+  im.style.width="calc(var(--in)*"+z[0]+")";im.style.height="calc(var(--in)*"+z[1]+")";
+  for(var k=0;k<SIZES.length;k++)$("sizes"+k).textContent=land?SIZES[k][1]+" x "+SIZES[k][0]+" in":SIZES[k][0]+" x "+SIZES[k][1]+" in";
+  $("pick").innerHTML="<b>$"+PRICES[m[1]][siz]+"</b>"+m[0]+", "+w+" x "+h+" in. "+m[2]+".";
+  $("orderMsg").textContent="Example prices for this mockup. Real prices will come from the print partner.";
+}
+function setMedium(i){med=i;press("mediums",MEDIUMS.length,i);refresh();}
+function setSize(i){siz=i;press("sizes",SIZES.length,i);refresh();}
+/* room: the sample scene is drawn to scale; in a room photo the viewer sets the scale by eye */
+var mine=false,roomUrl=null;
+function sizeWall(){var w=$("wall").getBoundingClientRect().width;if(w)$("wall").style.setProperty("--in",(w/120*(mine?$("roomScale").value/100:1))+"px");}
+function setRoom(m){
+  mine=m;var wl=$("wall"),a=$("art");
+  wl.classList.toggle("mine",m);$("roomImg").hidden=!m;$("scaleRow").hidden=!m;
+  $("roomSample").setAttribute("aria-pressed",m?"false":"true");$("roomMine").setAttribute("aria-pressed",m?"true":"false");
+  if(m){var im=$("roomImg"),r=im.naturalWidth/im.naturalHeight||1.3;wl.style.aspectRatio=String(Math.max(0.75,Math.min(1.78,r)));a.style.left="50%";a.style.top="40%";}
+  else{wl.style.aspectRatio="";a.style.left="";a.style.top="";}
+  sizeWall();
+}
+$("roomSample").addEventListener("click",function(){setRoom(false);});
+$("roomFile").addEventListener("change",function(e){
+  var f=e.target.files&&e.target.files[0];if(!f)return;
+  if(roomUrl)URL.revokeObjectURL(roomUrl);roomUrl=URL.createObjectURL(f);
+  var im=$("roomImg");
+  im.onload=function(){setRoom(true);};
+  im.onerror=function(){$("orderMsg").textContent="That photo could not be opened. Try a different one.";};
+  im.src=roomUrl;e.target.value="";
+});
+$("roomScale").addEventListener("input",sizeWall);
+(function(){var a=$("art"),d=null;
+  a.addEventListener("pointerdown",function(e){if(!mine)return;e.preventDefault();try{a.setPointerCapture(e.pointerId);}catch(_){}
+    var w=$("wall").getBoundingClientRect(),r=a.getBoundingClientRect();d={ox:e.clientX-(r.left+r.width/2),oy:e.clientY-(r.top+r.height/2),w:w};});
+  a.addEventListener("pointermove",function(e){if(!d)return;
+    var x=Math.max(0,Math.min(1,(e.clientX-d.ox-d.w.left)/d.w.width)),y=Math.max(0,Math.min(1,(e.clientY-d.oy-d.w.top)/d.w.height));
+    a.style.left=(x*100)+"%";a.style.top=(y*100)+"%";});
+  function end(){d=null;}a.addEventListener("pointerup",end);a.addEventListener("pointercancel",end);
+})();
+window.addEventListener("resize",sizeWall);
+$("orderBtn").addEventListener("click",function(){$("orderMsg").textContent="Ordering is not connected in this prototype. In the finished app, checkout happens right here.";});
+
+pick(0);
+requestAnimationFrame(frame);
+window.__pour={G:G,pour:pour,snap:function(){show(canvas.width,canvas.height);return canvas.toDataURL('image/png');},run:function(n){demo=0;for(var k=0;k<n;k++){if(pour.on)splat(pour.x,pour.y);step();}},pick:function(i){pick(i);}};
+})();
+</script>
+</body>
+</html>
