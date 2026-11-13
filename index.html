@@ -36,7 +36,12 @@ button[aria-pressed="true"],.btn[aria-pressed="true"]{background:var(--brass);bo
 .btn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
 .btn:focus-within{outline:2px solid var(--brass);outline-offset:2px}
 button.primary{background:var(--ink);border-color:var(--ink);color:#1c2025}
-main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:4px 16px;perspective:900px}
+main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:4px 16px;perspective:900px;position:relative}
+#levelMsg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(280px,80%);background:rgba(28,32,37,.94);border:1px solid var(--brass);
+  border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;z-index:2}
+#levelMsg[hidden]{display:none}
+#levelMsg p{margin:0;color:var(--muted);font-size:14px;line-height:1.4}
+#levelMsg b{display:block;color:var(--ink);font-size:18px;font-weight:600;margin-bottom:4px}
 #tiltWrap{transition:transform .12s ease-out;box-shadow:0 14px 40px rgba(0,0,0,.5);border-radius:3px;line-height:0}
 canvas{display:block;width:100%;height:100%;border-radius:3px;touch-action:none;background:#f4f2ea}
 footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
@@ -46,12 +51,13 @@ footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
 .sw{flex:0 0 auto}
 #multiBtn{padding:6px 10px;min-height:34px;font-size:13px;flex:0 0 auto}
 .plus{font-size:22px;line-height:1;color:var(--ink);background:var(--panel);border-style:dashed}
-#mixer{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+#mixer{display:flex;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 #mixer[hidden]{display:none}
-#mixer label{display:grid;grid-template-columns:86px 1fr;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
-#mixer input[type=range]{width:100%;accent-color:var(--brass)}
-#mixPreview{width:44px;height:44px;border-radius:50%;border:2px solid var(--ink);flex:0 0 auto}
-#mixer .row{justify-content:space-between}
+#wheel{width:150px;height:150px;border-radius:50%;touch-action:none;flex:0 0 auto;cursor:crosshair}
+#mixSide{display:flex;flex-direction:column;gap:10px;flex:1;min-width:0}
+#mixSide label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+#mixSide input[type=range]{width:100%;accent-color:var(--brass)}
+#mixPreview{width:40px;height:40px;border-radius:50%;border:2px solid var(--ink);flex:0 0 auto}
 .sw{width:34px;height:34px;min-height:34px;padding:0;border-radius:50%;border:2px solid var(--line);position:relative}
 .sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--bench),0 0 0 4px var(--brass)}
 #status{margin:0;color:var(--muted);font-size:13px;line-height:1.35;min-height:2.7em}
@@ -74,7 +80,6 @@ footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
 #sofa i{flex:1;height:calc(var(--in)*10);background:#5c6a74;border-radius:calc(var(--in)*2)}
 #art{position:absolute;left:50%;top:32.6%;transform:translate(-50%,-50%);box-sizing:content-box;font-size:var(--in);transition:width .2s ease,height .2s ease}
 #art img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:block;max-width:none}
-#art.landscape img{transform:translate(-50%,-50%) rotate(90deg)}
 #art::after{content:"";position:absolute;inset:0;pointer-events:none}
 #art.metal{box-shadow:0 calc(var(--in)*1.2) calc(var(--in)*2.4) rgba(0,0,0,.38)}
 #art.metal::after{background:linear-gradient(115deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.28) 47%,rgba(255,255,255,0) 62%)}
@@ -91,6 +96,7 @@ footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
 #scaleRow label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
 #scaleRow input{width:100%;accent-color:var(--brass)}
 #scaleRow p{text-align:left}
+#perspReset{align-self:flex-start}
 #options{display:flex;flex-direction:column;gap:12px}
 
 #buy{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
@@ -99,6 +105,14 @@ footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
 .fine{font-size:13px}
 #backBtn{align-self:center}
 #fail{padding:24px;text-align:center;color:var(--ink)}
+/* phone held sideways: canvas takes the full height on the left, controls stack on the right */
+@media (orientation:landscape) and (max-height:560px){
+  body{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,44%);grid-template-rows:auto minmax(0,1fr)}
+  main{grid-column:1;grid-row:1 / span 2;padding:8px}
+  header{grid-column:2;grid-row:1;padding:8px 12px}
+  footer{grid-column:2;grid-row:2;overflow-y:auto;padding:4px 12px 10px}
+  #status{min-height:0}
+}
 </style>
 </head>
 <body>
@@ -112,6 +126,10 @@ footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
 
 <main id="stage">
   <div id="tiltWrap"><canvas id="c" aria-label="Painting canvas"></canvas></div>
+  <div id="levelMsg" hidden>
+    <p><b>Hold your phone steady</b>This will be "Level". Once you are ready, any movement will move the paint.</p>
+    <button id="levelNow" type="button" class="primary">Ready</button>
+  </div>
 </main>
 
 <footer>
@@ -121,11 +139,10 @@ footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
     <button id="motionBtn" type="button" aria-pressed="false">Use phone motion</button>
   </div>
   <div id="mixer" hidden>
-    <label for="mixHue">Color<input id="mixHue" type="range" min="0" max="360" value="200"></label>
-    <label for="mixSat">Richness<input id="mixSat" type="range" min="0" max="100" value="75"></label>
-    <label for="mixLit">Brightness<input id="mixLit" type="range" min="5" max="95" value="50"></label>
-    <div class="row">
+    <canvas id="wheel" width="240" height="240" aria-label="Color wheel. Drag to choose a color."></canvas>
+    <div id="mixSide">
       <span id="mixPreview"></span>
+      <label for="mixVal">Brightness<input id="mixVal" type="range" min="0" max="100" value="100"></label>
       <span class="row"><button id="mixCancel" type="button">Cancel</button><button id="mixAdd" type="button" class="primary">Add color</button></span>
     </div>
   </div>
@@ -163,10 +180,14 @@ footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
         <label id="roomMine" class="btn" for="roomFile" aria-pressed="false">Use a photo of my room<input id="roomFile" type="file" accept="image/*"></label>
       </div>
       <div id="scaleRow" hidden>
-        <label for="roomScale">Print size on your wall<input id="roomScale" type="range" min="30" max="300" value="100"></label>
-        <p class="fine">Drag the print to place it. Slide until it looks true to size next to your furniture.</p>
+        <p class="fine">Drag the print to place it, then match it to your wall.</p>
+        <label for="roomScale">Size on your wall<input id="roomScale" type="range" min="30" max="300" value="100"></label>
+        <label for="perspY">Wall angle, left to right<input id="perspY" type="range" min="-50" max="50" value="0"></label>
+        <label for="perspX">Wall angle, up and down<input id="perspX" type="range" min="-35" max="35" value="0"></label>
+        <label for="perspZ">Straighten<input id="perspZ" type="range" min="-12" max="12" value="0" step="0.5"></label>
+        <button id="perspReset" type="button">Reset angles</button>
       </div>
-      <div class="row" role="group" aria-label="Orientation" id="orients"></div>
+      <div class="row"><button id="rotBtn" type="button">Rotate 90°</button></div>
       <div class="row" role="group" aria-label="Material" id="mediums"></div>
       <div class="row" role="group" aria-label="Size" id="sizes"></div>
       <div id="buy">
@@ -301,7 +322,7 @@ var mode="pour";
 var pour={on:false,x:SW/2,y:SH/2};
 var cup=0.5;                   // pour clock, in bands; each color change starts a new band
 var pouredSince=false;
-var motion={on:false,seen:false,b0:null,g0:null};
+var motion={on:false,seen:false,state:"off",b0:0,g0:0,b:0,g:0,flatSince:0};
 var drag=null;
 
 var BAND=0.45;                 // seconds of pouring per colour band
@@ -344,13 +365,13 @@ function frame(){
 
 /* ---------- layout ---------- */
 function fit(){
-  var r=stage.getBoundingClientRect(),w=r.width-32,h=r.height-8;
+  var r=stage.getBoundingClientRect(),w=r.width-16,h=r.height-8;
   var cw=Math.min(w,h*SW/SH),ch=cw*SH/SW;
   wrap.style.width=cw+"px";wrap.style.height=ch+"px";
   var dpr=Math.min(window.devicePixelRatio||1,3);
   canvas.width=Math.min(1440,Math.round(cw*dpr));canvas.height=Math.round(canvas.width*SH/SW);
 }
-window.addEventListener("resize",fit);fit();
+window.addEventListener("resize",fit);window.addEventListener("orientationchange",function(){setTimeout(fit,250);});fit();
 
 /* ---------- palette ---------- */
 var pal=document.getElementById("palette");
@@ -364,13 +385,33 @@ try{JSON.parse(localStorage.getItem("pour.custom")||"[]").forEach(function(h){if
 var PRESETS=24;
 COLORS.forEach(function(c,i){addSwatch(i);});
 
-var mixer=document.getElementById("mixer"),mh=document.getElementById("mixHue"),ms=document.getElementById("mixSat"),ml=document.getElementById("mixLit"),addBtn=document.getElementById("addColor");
-function hslHex(h,sv,l){sv/=100;l/=100;var a=sv*Math.min(l,1-l);
-  function f(n){var k=(n+h/30)%12,v=l-a*Math.max(-1,Math.min(k-3,9-k,1));return ("0"+Math.round(v*255).toString(16)).slice(-2);}
-  return "#"+f(0)+f(8)+f(4);}
-function mixNow(){return hslHex(+mh.value,+ms.value,+ml.value);}
-function mixShow(){document.getElementById("mixPreview").style.background=mixNow();}
-[mh,ms,ml].forEach(function(el){el.addEventListener("input",mixShow);});
+var mixer=document.getElementById("mixer"),addBtn=document.getElementById("addColor");
+var wheel=document.getElementById("wheel"),wctx=wheel.getContext("2d"),mixVal=document.getElementById("mixVal");
+var mixH=200,mixS=0.75;        // hue in degrees, saturation 0..1; brightness comes from the slider
+function hsvRgb(h,sv,v){var c=v*sv,x=c*(1-Math.abs((h/60)%2-1)),m=v-c,r=0,g=0,b=0;
+  if(h<60){r=c;g=x;}else if(h<120){r=x;g=c;}else if(h<180){g=c;b=x;}else if(h<240){g=x;b=c;}else if(h<300){r=x;b=c;}else{r=c;b=x;}
+  return [Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];}
+function hex2(n){return ("0"+n.toString(16)).slice(-2);}
+function mixNow(){var c=hsvRgb(mixH,mixS,mixVal.value/100);return "#"+hex2(c[0])+hex2(c[1])+hex2(c[2]);}
+function mixShow(){
+  var N=wheel.width,R=N/2,img=wctx.createImageData(N,N),d=img.data,v=mixVal.value/100;
+  for(var y=0;y<N;y++)for(var x=0;x<N;x++){
+    var dx=x+0.5-R,dy=y+0.5-R,rr=Math.sqrt(dx*dx+dy*dy)/R;if(rr>1)continue;
+    var h=(Math.atan2(dy,dx)*180/Math.PI+360)%360,c=hsvRgb(h,rr,v),o=(y*N+x)*4;
+    d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=255;}
+  wctx.putImageData(img,0,0);
+  var a=mixH*Math.PI/180,mx=R+Math.cos(a)*mixS*R,my=R+Math.sin(a)*mixS*R;
+  wctx.lineWidth=3;wctx.strokeStyle="#fff";wctx.beginPath();wctx.arc(mx,my,9,0,6.2832);wctx.stroke();
+  wctx.lineWidth=1.5;wctx.strokeStyle="#000";wctx.beginPath();wctx.arc(mx,my,11,0,6.2832);wctx.stroke();
+  document.getElementById("mixPreview").style.background=mixNow();
+}
+function wheelPick(e){var r=wheel.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+  mixS=Math.min(1,Math.sqrt(dx*dx+dy*dy)/(r.width/2));mixH=(Math.atan2(dy,dx)*180/Math.PI+360)%360;mixShow();}
+var wheelDown=false;
+wheel.addEventListener("pointerdown",function(e){e.preventDefault();wheelDown=true;try{wheel.setPointerCapture(e.pointerId);}catch(_){}wheelPick(e);});
+wheel.addEventListener("pointermove",function(e){if(wheelDown)wheelPick(e);});
+wheel.addEventListener("pointerup",function(){wheelDown=false;});wheel.addEventListener("pointercancel",function(){wheelDown=false;});
+mixVal.addEventListener("input",mixShow);
 function mixOpen(o){mixer.hidden=!o;addBtn.setAttribute("aria-expanded",o?"true":"false");if(o)mixShow();fit();}
 addBtn.addEventListener("click",function(){mixOpen(mixer.hidden);});
 document.getElementById("mixCancel").addEventListener("click",function(){mixOpen(false);});
@@ -398,7 +439,7 @@ multiBtn.addEventListener("click",function(){
 function hint(){
   if(mode==="pour")say(multi?"Multi-color cup: tap colors to add or remove them. Hold the canvas and the cup pours "+(cupList.length>1?"all "+cupList.length:"them")+" in turn."
     :"Touch and hold the canvas to pour. Tap another color to switch, or + to mix your own.");
-  else if(motion.on&&motion.seen)say("Phone motion is on. Tip the phone and the paint runs downhill. Lay it flat to stop.");
+  else if(motion.state==="live")say("Phone motion is on. Tip the phone and the paint runs downhill. Lay it flat to stop.");
   else say("Drag on the canvas to tip it. Paint runs toward your finger. Let go to lay it flat.");
 }
 
@@ -419,7 +460,7 @@ function setTouchTilt(dx,dy){
 canvas.addEventListener("pointerdown",function(e){
   e.preventDefault();demo=0;try{canvas.setPointerCapture(e.pointerId);}catch(_){}
   if(mode==="pour"){var p=toSim(e);pour.on=true;pour.x=p[0];pour.y=p[1];}
-  else if(!motion.on||!motion.seen){drag={x:e.clientX,y:e.clientY};}
+  else if(motion.state!=="live"){drag={x:e.clientX,y:e.clientY};}
 });
 canvas.addEventListener("pointermove",function(e){
   if(mode==="pour"&&pour.on){var p=toSim(e);pour.x=p[0];pour.y=p[1];}
@@ -429,24 +470,33 @@ function up(){pour.on=false;if(drag){drag=null;G[0]=0;G[1]=0;wrap.style.transfor
 canvas.addEventListener("pointerup",up);canvas.addEventListener("pointercancel",up);
 
 /* ---------- phone motion ---------- */
+var levelMsg=document.getElementById("levelMsg");
+function screenAngle(){var a=0;try{a=(screen.orientation&&typeof screen.orientation.angle==="number")?screen.orientation.angle:(window.orientation||0);}catch(_){}return ((a%360)+360)%360;}
+function goLive(b,g){motion.b0=b;motion.g0=g;motion.state="live";levelMsg.hidden=true;setMode("tilt");}
 function onOrient(e){
   if(e.beta==null||e.gamma==null)return;
-  if(!motion.seen){motion.seen=true;motion.b0=e.beta;motion.g0=e.gamma;setMode("tilt");}
-  var k=Math.PI/180,gx=Math.sin((e.gamma-motion.g0)*k)*2.4,gy=-Math.sin((e.beta-motion.b0)*k)*2.4,len=Math.hypot(gx,gy);
+  motion.seen=true;motion.b=e.beta;motion.g=e.gamma;
+  /* nothing moves until the person taps Ready; the angle at that moment becomes level */
+  if(motion.state!=="live")return;
+  var k=Math.PI/180,dx=Math.sin((e.gamma-motion.g0)*k)*2.4,dy=-Math.sin((e.beta-motion.b0)*k)*2.4;
+  /* the sensor reports in the phone's own frame; turn it to match a rotated screen */
+  var a=screenAngle()*k,gx=dx*Math.cos(a)-dy*Math.sin(a),gy=dx*Math.sin(a)+dy*Math.cos(a),len=Math.hypot(gx,gy);
   if(len<0.06){gx=0;gy=0;}                       // dead zone so a resting phone holds still
   if(len>1.4){gx*=1.4/len;gy*=1.4/len;}
   G[0]=gx;G[1]=gy;
 }
+document.getElementById("levelNow").addEventListener("click",function(){if(motion.seen)goLive(motion.b,motion.g);});
 if(typeof DeviceOrientationEvent==="undefined"){bMotion.hidden=true;}
 bMotion.addEventListener("click",function(){
-  if(motion.on){motion.on=false;motion.seen=false;window.removeEventListener("deviceorientation",onOrient);
+  if(motion.on){motion.on=false;motion.seen=false;motion.state="off";levelMsg.hidden=true;window.removeEventListener("deviceorientation",onOrient);
     G[0]=0;G[1]=0;bMotion.setAttribute("aria-pressed","false");hint();return;}
   function start(){
-    motion.on=true;motion.seen=false;bMotion.setAttribute("aria-pressed","true");
+    motion.on=true;motion.seen=false;motion.state="wait";motion.flatSince=0;G[0]=0;G[1]=0;bMotion.setAttribute("aria-pressed","true");
+    levelMsg.hidden=false;
     window.addEventListener("deviceorientation",onOrient);
-    say("Hold the phone flat for a second so it can set level.");
+    say("Hold the phone steady, then tap Ready. That position becomes level.");
     setTimeout(function(){
-      if(motion.on&&!motion.seen){motion.on=false;window.removeEventListener("deviceorientation",onOrient);
+      if(motion.on&&!motion.seen){motion.on=false;motion.state="off";levelMsg.hidden=true;window.removeEventListener("deviceorientation",onOrient);
         bMotion.setAttribute("aria-pressed","false");setMode("tilt");
         say("Motion sensors are not available in this view. Drag on the canvas to tip it instead.");}
     },1500);
@@ -464,7 +514,7 @@ document.getElementById("clearBtn").addEventListener("click",function(){demo=0;c
 var $=function(id){return document.getElementById(id);};
 var overlay=$("overlay"),stepSave=$("stepSave"),stepWall=$("stepWall"),lastUrl=null,lastBlob=null,outW=0,outH=0;
 function goWall(){stepSave.hidden=true;stepWall.hidden=false;
-  land=false;press("orients",2,0);setMedium(0);setSize(1);if(!mine)setRoom(false);overlay.scrollTop=0;sizeWall();}
+  rot=0;land=false;setMedium(0);setSize(1);if(!mine)setRoom(false);overlay.scrollTop=0;sizeWall();}
 function closeAll(){overlay.hidden=true;}
 
 $("doneBtn").addEventListener("click",function(){
@@ -512,17 +562,17 @@ $("backBtn").addEventListener("click",closeAll);
 var MEDIUMS=[["Metal","metal","Glossy aluminum, floats off the wall"],["Canvas","canvas","Stretched canvas, wrapped edges"],["Framed print","framed","Fine art paper, black frame, white mat"]];
 var SIZES=[[9,12],[12,16],[18,24],[30,40]];
 var PRICES={metal:[59,89,159,349],canvas:[45,65,105,219],framed:[69,99,169,329]};
-var med=0,siz=1,land=false;
+var med=0,siz=1,rot=0,land=false;
 function chips(host,items,label,onPick){items.forEach(function(it,i){var b=document.createElement("button");b.type="button";b.id=host.id+i;b.textContent=label(it);
   b.addEventListener("click",function(){onPick(i);});host.appendChild(b);});}
-chips($("orients"),["Portrait","Landscape"],function(o){return o;},function(i){land=i===1;press("orients",2,i);refresh();});
+$("rotBtn").addEventListener("click",function(){rot=(rot+90)%360;land=rot%180!==0;refresh();});
 chips($("mediums"),MEDIUMS,function(m){return m[0];},function(i){setMedium(i);});
 chips($("sizes"),SIZES,function(z){return z[0]+" x "+z[1]+" in";},function(i){setSize(i);});
 function press(host,n,i){for(var k=0;k<n;k++)$(host+k).setAttribute("aria-pressed",k===i?"true":"false");}
 function refresh(){
   var m=MEDIUMS[med],z=SIZES[siz];
   var a=$("art"),im=$("wallImg"),w=land?z[1]:z[0],h=land?z[0]:z[1];
-  a.className=m[1]+(land?" landscape":"");a.style.width="calc(var(--in)*"+w+")";a.style.height="calc(var(--in)*"+h+")";
+  a.className=m[1];im.style.transform="translate(-50%,-50%) rotate("+rot+"deg)";a.style.width="calc(var(--in)*"+w+")";a.style.height="calc(var(--in)*"+h+")";
   im.style.width="calc(var(--in)*"+z[0]+")";im.style.height="calc(var(--in)*"+z[1]+")";
   for(var k=0;k<SIZES.length;k++)$("sizes"+k).textContent=land?SIZES[k][1]+" x "+SIZES[k][0]+" in":SIZES[k][0]+" x "+SIZES[k][1]+" in";
   $("pick").innerHTML="<b>$"+PRICES[m[1]][siz]+"</b>"+m[0]+", "+w+" x "+h+" in. "+m[2]+".";
@@ -539,7 +589,7 @@ function setRoom(m){
   $("roomSample").setAttribute("aria-pressed",m?"false":"true");$("roomMine").setAttribute("aria-pressed",m?"true":"false");
   if(m){var im=$("roomImg"),r=im.naturalWidth/im.naturalHeight||1.3;wl.style.aspectRatio=String(Math.max(0.75,Math.min(1.78,r)));a.style.left="50%";a.style.top="40%";}
   else{wl.style.aspectRatio="";a.style.left="";a.style.top="";}
-  sizeWall();
+  sizeWall();persp();
 }
 $("roomSample").addEventListener("click",function(){setRoom(false);});
 $("roomFile").addEventListener("change",function(e){
@@ -551,6 +601,13 @@ $("roomFile").addEventListener("change",function(e){
   im.src=roomUrl;e.target.value="";
 });
 $("roomScale").addEventListener("input",sizeWall);
+/* perspective: lean the print so it sits on a wall photographed from an angle */
+function persp(){
+  var y=mine?+$("perspY").value:0,x=mine?+$("perspX").value:0,z=mine?+$("perspZ").value:0;
+  $("art").style.transform=(x||y||z)?"translate(-50%,-50%) perspective(700px) rotateY("+y+"deg) rotateX("+x+"deg) rotateZ("+z+"deg)":"";
+}
+["perspY","perspX","perspZ"].forEach(function(id){$(id).addEventListener("input",persp);});
+$("perspReset").addEventListener("click",function(){$("perspY").value=0;$("perspX").value=0;$("perspZ").value=0;persp();});
 (function(){var a=$("art"),d=null;
   a.addEventListener("pointerdown",function(e){if(!mine)return;e.preventDefault();try{a.setPointerCapture(e.pointerId);}catch(_){}
     var w=$("wall").getBoundingClientRect(),r=a.getBoundingClientRect();d={ox:e.clientX-(r.left+r.width/2),oy:e.clientY-(r.top+r.height/2),w:w};});
