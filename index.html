@@ -88,7 +88,7 @@ footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
 .sheet p{margin:0;color:var(--muted);text-align:center;line-height:1.4}
 .center{justify-content:center}
 #outImg{align-self:center;max-width:70%;max-height:46vh;border-radius:3px;box-shadow:0 14px 40px rgba(0,0,0,.5);-webkit-user-select:auto;user-select:auto;-webkit-touch-callout:default}
-#toWall{align-self:center}
+#toWall,#backSave{align-self:center}
 /* wall scene: the box is 120 inches wide, --in is one inch */
 #wall{position:relative;width:100%;aspect-ratio:120/92;border-radius:12px;overflow:hidden;
   background:linear-gradient(180deg,#cfc9bf 0%,#c4bdb2 100%)}
@@ -134,9 +134,9 @@ footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
 }
 </style>
 </head>
-<body>
+<body data-build="12">
 <header>
-  <h1>Pour Studio<small id="build">build 11</small></h1>
+  <h1>Pour Studio</h1>
 </header>
 
 <main id="stage">
@@ -200,6 +200,7 @@ footer{display:flex;flex-direction:column;gap:10px;padding:10px 16px 14px}
       <button id="skipSave" type="button">Make it real</button>
     </div>
     <button id="toWall" type="button" hidden>Next</button>
+    <button id="backSave" type="button">Back to painting</button>
   </section>
 
   <section id="stepWall" class="sheet" hidden>
@@ -723,6 +724,7 @@ $("saveBtn").addEventListener("click",function(){
 $("skipSave").addEventListener("click",function(){if(!busy)goWall();});
 $("toWall").addEventListener("click",goWall);
 $("backBtn").addEventListener("click",closeAll);
+$("backSave").addEventListener("click",closeAll);
 
 /* print file: sized for the chosen print, 300 dots per inch up to a 6000 pixel long side */
 function printDims(){var z=SIZES[siz],longIn=Math.max(z[0],z[1]),L=Math.min(6000,Math.max(3600,longIn*300)),d=hdDims(L);return {w:d[0],h:d[1],dpi:Math.round(L/longIn)};}
